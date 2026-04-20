@@ -1,0 +1,1 @@
+Entrega final del proyecto de la cuenta bancaria, el estado actual del proyecto no le permite funcionar pero se usara el esquema actual para implementar su funcionalidad ene l futuro y conseguir así que funcione la aplicación
