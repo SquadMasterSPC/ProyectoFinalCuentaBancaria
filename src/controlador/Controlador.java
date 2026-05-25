@@ -1,67 +1,335 @@
-/**
- * 
- */
 package controlador;
-import java.security.KeyStore.PrivateKeyEntry;
 
-import modelo.Administrador;
-import modelo.BackupDeRegistros;
-import modelo.Cliente;
-import modelo.CuentaBancaria;
-import modelo.Empleado;
-import modelo.Estadisticas;
-import modelo.HistorialDeSesiones;
-import modelo.Incidencia;
-import modelo.Ingreso;
-import modelo.Operacion;
-import modelo.Reintegro;
-import modelo.Retencion;
-import modelo.Tarjeta;
-import modelo.Transferencia;
-import modelo.Usuario;
-import modelo.VerificarIdentidad;
-/**
- * 
- */
+import modelo.*;
+import dao.UsuariosDao;
+import dao.ConexionDB;
+import dao.CuentasDao;
+import service.Login;
+import vista.Vista;
+import java.util.Scanner;
+import modelo.DatosCliente;
+import dao.IncidenciasDao;
+import logica.Logica;
+
+import java.security.PublicKey;
+import java.util.Iterator;
+import java.util.List;
+
+
 public class Controlador {
 
-	private Administrador administrador;
-	private BackupDeRegistros backUp;
-	private Cliente cliente;
 	private CuentaBancaria cBancaria;
-	private Empleado empleado;
-	private Estadisticas estadisticas;
-	private HistorialDeSesiones hDeSesiones;
-	private Incidencia incidencia;
 	private Ingreso ingreso;
-	private Operacion operacion;
-	private Reintegro reintegro;
-	private Retencion retencion;
-	private Tarjeta tarjeta;
 	private Transferencia transferencia;
 	private Usuario usuario;
-	private VerificarIdentidad vIdentidad;
+	private UsuariosDao uDao;
+	private IncidenciasDao iDao;
+	private CuentasDao cDao; 
+	private Login login;
+	private String nombreUsuario;
+	private String contraseniaUsuario;
+	private Vista vista;
+	private Reintegro reintegro;
+	private Logica logica;
 	
+	private final int intentosRestantes = 3;
+	//private Scanner sc;
+
 	public Controlador() {
 		super();
-		administrador = new Administrador(null, null, null, null, null);
-		backUp = new BackupDeRegistros(null, null);
-		cliente = new Cliente(null, null, null, null, null, 0);
 		cBancaria = new CuentaBancaria(null, null, 0, 0, null);
-		empleado = new Empleado(null, null, null, null, null);
-		estadisticas = new Estadisticas(null, null);
-		hDeSesiones = new HistorialDeSesiones();
-		incidencia = new Incidencia(null, null, null, false, null, null);
 		ingreso = new Ingreso(null, 0, null);
-		operacion = new Operacion(null, 0, null);
-		reintegro = new Reintegro(null, 0, null);
-		retencion = new Retencion(null, 0, false, null, null);
-		tarjeta = new Tarjeta(null, 0, 0);
 		transferencia = new Transferencia(null, 0, null);
-		usuario = new Usuario(null, null, null, null, null);
-		vIdentidad = new VerificarIdentidad(null, null, false, null, null);
+		usuario = new Usuario(null, null, null, null, null, 0.0, null, 0);
+		uDao = new UsuariosDao();
+		iDao = new IncidenciasDao();
+		cDao = new CuentasDao(cBancaria);
+		login = new Login();
+		vista = new Vista();
+		reintegro = new Reintegro(contraseniaUsuario, 0, null);
+		logica = new Logica();
+		//datosCliente = new DatosCliente(0, nombreUsuario, contraseniaUsuario, nombreUsuario, contraseniaUsuario, null);
 	}
-	
-	
-	
+
+	public void ejecutar() {
+		int opcion;
+		do {
+			opcion = vista.inicioDelSistema();
+			switch (opcion) {
+			case 1:
+				procesarIniciarSesion();
+				break;
+			case 2:
+				procesarRegistrarNuevoUsuario();
+				break;
+			}
+		} while (opcion != 0);
+	}
+
+	private void procesarIniciarSesion() {
+	    boolean sesionIniciada = false;
+
+	    for (int i = 0; i < intentosRestantes; i++) {
+	        String nombre = vista.pedirNombre();
+	        String contrasenia = vista.pedirContrasenia();
+
+	        usuario = login.inicioDeSesion(nombre, contrasenia);
+
+	        if (usuario != null) {
+	            vista.mostrarMensaje("Bienvenido " + usuario.getNombre());
+	            sesionIniciada = true;
+	            procesarRedirigirSegunRol();
+	            break;
+	        } else {
+	            int intentosQueLeQuedan = intentosRestantes - (i + 1);
+	            if (intentosQueLeQuedan > 0) {
+	                vista.mostrarMensaje("Credenciales incorrectas. Te quedan " + intentosQueLeQuedan + " intentos.");
+	            }
+	        }
+	    }
+
+	    if (!sesionIniciada) {
+	        vista.mostrarMensaje("ERROR: Has superado el límite de intentos permitidos. Acceso denegado.");
+	        
+	    }
+	}
+
+	private void procesarRedirigirSegunRol() {
+		String rol = usuario.getRol();
+		if ("ADMIN".equalsIgnoreCase(rol)) {
+
+		} else if ("EMPLEADO".equalsIgnoreCase(rol)) {
+			int opcionEmpleado;
+			do {
+				opcionEmpleado = vista.mostrarMenuEmpleados();
+				switch (opcionEmpleado) {
+				case 1:
+					vista.mostrarMensaje("\n--- LISTA DE INCIDENCIAS PENDIENTES ---");
+					List<String> listaPendientes = iDao.obtenerIncidenciasPendientes();
+					if(listaPendientes.isEmpty()) {
+						vista.mensajeNingunaIncidencia();
+					} else {
+						for(String s : listaPendientes) {
+							vista.mostrarMensaje(s);
+						}
+					}
+
+					break;
+				case 2:
+					vista.mostrarMensaje("\n--- LISTA DE INCIDENCIAS ---");
+					List<String> lista = iDao.leerIncidencias();
+					if (lista.isEmpty()) {
+						vista.mensajeNingunaIncidencia();
+					} else {
+						for (String s : lista) {
+							vista.mostrarMensaje(s);
+						}
+					}
+					break;
+				case 3: // Atender incidencia
+				    vista.mostrarMensaje("--- INCIDENCIAS PENDIENTES DE ATENDER ---");
+				    List<String> pendientes = iDao.obtenerIncidenciasPendientes();
+				    
+				    if (pendientes.isEmpty()) {
+				        vista.mostrarMensaje("No hay incidencias pendientes. ¡Buen trabajo!");
+				    } else {
+				        // Mostramos las incidencias pendientes
+				        for (String inc : pendientes) {
+				            System.out.println(inc);
+				        }
+				        
+				        // Pedimos el ID de la incidencia que quiere resolver
+				        int idIncidenciaAAtender = vista.pedirInt(); 
+				        
+				        // CORRECCIÓN: Usamos 'usuario', que es la variable real del login
+				        int idEmpleadoActivo = usuario.getId(); 
+				        
+				        System.out.println("DEBUG: Enviando al DAO -> idIncidencia: " + idIncidenciaAAtender + " | idEmpleado: " + idEmpleadoActivo);
+				        
+				        // Llamamos a tu método pasándole los datos en el orden correcto
+				        if (iDao.atenderIncidencias(idIncidenciaAAtender, idEmpleadoActivo)) {
+				            vista.mostrarMensaje("Se ha resuelto la incidencia con éxito.");
+				        } else {
+				            vista.mostrarMensaje("No se pudo actualizar la incidencia. Verifica el ID.");
+				        }
+				    }
+				    break;
+				case 4: // Ver movimientos de cualquier cuenta
+				    String cuentaABuscar = vista.pedirString("Introduzca el nº de cuenta a revisar: ");
+				    List<String> historialEmp = cDao.obtenerHistorialMovimientos(cuentaABuscar);
+				    vista.mostrarHistorial(historialEmp);
+				    break;
+
+				case 5: // Ver datos de cliente y sus cuentas
+				    String clienteABuscar = vista.pedirString("Introduzca el nombre del cliente: ");
+				    DatosCliente datos = cDao.mostrarDatosCompletosCliente(clienteABuscar);
+				    //cDao.mostrarDatosCompletosCliente(clienteABuscar);
+				    vista.mostrarDatosCompletosCliente(datos);
+				    break;
+					
+				case 6:
+					vista.mensajeCierreSesion();
+					break;
+				}
+			} while (opcionEmpleado != 6);
+
+		} else {
+
+			int opcionGestion;
+			do {
+				opcionGestion = vista.menuSeleccionCuenta();
+				switch (opcionGestion) {
+				case 1:
+					List<CuentaBancaria> misCuentas = cDao.obtenerCuentasPorUsuario(usuario.getId());
+					if (misCuentas.isEmpty()) {
+						vista.mostrarMensaje("No tienes cuentas activas.");
+					} else {
+						CuentaBancaria seleccionada = vista.elegirCuentaEntreLista(misCuentas);
+						if (seleccionada != null) {
+							ejecutarMenuOperaciones(seleccionada);
+						}
+					}
+					break;
+				case 2:
+					procesarAltaNuevaCuenta();
+					break;
+				}
+			} while (opcionGestion != 3);
+		}
+	}
+
+
+	private void ejecutarMenuOperaciones(CuentaBancaria cuentaSeleccionada) {
+		int opcion;
+		do {
+			opcion = vista.menuClientes();
+			switch (opcion) {
+			case 1: //Hacer ingreso
+				vista.mostrarMensaje("Escriba el dinero a ingresar en la cuenta: " + cuentaSeleccionada.getNumCuenta()+"\n");
+				Double cantidad = vista.pedirCantidadDinero();
+
+				if (ingreso.ingresar(cuentaSeleccionada, cantidad)) {
+					vista.mostrarMensaje("Ingreso exitoso. Saldo: " + cuentaSeleccionada.getSaldo());
+				} else {
+					vista.mostrarMensaje("Error al realizar el ingreso. Cantidad no válida o error en BD.");
+				}
+				break;
+			case 2: //Hacer reintegro
+				vista.mostrarMensaje("Escriba el dinero a retirar de la cuenta: " + cuentaSeleccionada.getNumCuenta()+"\n");
+                Double cantRetirar = vista.pedirCantidadDinero();
+                
+                Double saldoCuenta = logica.validarSaldoCuenta(cuentaSeleccionada);
+                
+                
+                if (reintegro.retirar(cuentaSeleccionada, cantRetirar, saldoCuenta)) {
+                    vista.mostrarMensaje("Retirada completada. Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
+                } else {
+                    vista.mostrarMensaje("Error: Saldo insuficiente o cantidad no válida.");
+                }
+                break;
+			case 3: //Hacer transferencia
+				vista.mostrarMensaje("--- Nueva Transferencia ---");
+                vista.mostrarMensaje("Cuenta origen: " + cuentaSeleccionada.getNumCuenta());
+                
+                int numeroCuentaDestino = vista.pedirInt();
+                Double cantTransferir = vista.pedirCantidadDinero();
+                
+                if (transferencia.realizarTransferencia(cuentaSeleccionada, numeroCuentaDestino, cantTransferir)) {
+                    vista.mostrarMensaje("Transferencia enviada con éxito.");
+                    vista.mostrarMensaje("Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
+                } else {
+                    vista.mostrarMensaje("Error: Fondos insuficientes o la cuenta destino no existe.");
+                }
+                break;
+			case 4: //Obtener saldo
+				vista.mostrarMensaje("Cuenta: " + cuentaSeleccionada.getNombre());
+				vista.mostrarMensaje("Su saldo es de: " + cuentaSeleccionada.getSaldo() + "€");
+				break;
+			case 5: //Redactar incidencias
+			    String desc = vista.pedirString("Describa su incidencia:");
+			    if (iDao.guardarIncidencia(usuario.getId(), usuario.getNombre(), desc)) {
+			        vista.mostrarMensaje("Incidencia registrada con éxito.");
+			    } else {
+			        vista.mostrarMensaje("Error al registrar incidencia.");
+			    }
+			    break;
+			case 6: // Historial de movimientos
+				List<String> movs = cDao.obtenerHistorialMovimientos(cuentaSeleccionada.getNumCuenta());
+			    vista.mostrarHistorial(movs);
+			    break;
+			    
+			case 7: //salir
+				vista.mostrarMensaje("Volviendo a selección de cuenta...");
+				break;
+			}
+		} while (opcion != 7);
+	}
+
+	private void procesarAltaNuevaCuenta() {
+		String nombreC = vista.pedirNombreCuenta();
+
+		int numAleatorio = (int) (Math.random() * 9000000L + 1000000L);
+
+		if (cDao.crearCuenta(usuario.getId(), nombreC, numAleatorio)) {
+
+			cDao.actualizarSaldo(String.valueOf(numAleatorio), 1000.00);
+
+			vista.mostrarMensaje("¡Cuenta creada con éxito!");
+			vista.mostrarMensaje("Nombre: " + nombreC);
+			vista.mostrarMensaje("Número: " + numAleatorio);
+
+		} else {
+			vista.mostrarMensaje("Error al crear la cuenta.");
+		}
+	}
+
+	private void procesarRegistrarNuevoUsuario() {
+		boolean valido = true;
+		usuario = new Usuario(nombreUsuario, contraseniaUsuario, null, null, null, 0, null, 0);
+
+		while (valido) {
+			vista.mostrarMensaje("\n--- FORMULARIO DE REGISTRO ---");
+			String nom = vista.pedirNombre();
+			if (nom != null) {
+				String ape = vista.pedirApellido();
+				if (ape != null) {
+					String correo = vista.pedirCorreo();
+					if (correo != null) {
+						String contrasenia = vista.pedirContrasenia();
+						if (contrasenia != null) {
+							usuario.setNombre(nom);
+							usuario.setApellido(ape);
+							usuario.setCorreoElectronico(correo);
+							usuario.setContrasenia(contrasenia);
+
+							boolean exito = uDao.registrarUsuarioCompleto(usuario);
+							if (exito) {
+								vista.mostrarMensaje("Usuario registrado. ID: " + usuario.getId());
+							} else {
+								vista.mostrarMensaje("No se pudo completar el registro.");
+							}
+							break;
+						} else {
+							valido = false;
+						}
+					} else {
+						valido = false;
+					}
+				} else {
+					valido = false;
+				}
+			} else {
+				valido = false;
+			}
+
+			if (!valido) {
+				if (vista.reintentarCrearCuenta()) {
+					valido = true;
+				} else {
+					vista.mostrarMensaje("Registro cancelado.");
+					break;
+				}
+			}
+		}
+	}
 }
