@@ -1,10 +1,63 @@
 package dao;
 
 import java.sql.*;
+
 import modelo.Usuario;
+import excepciones.persistencia.PersistenciaException;
+import excepciones.seguridad.CredencialesInvalidasException;
 
 public class UsuariosDao {
 
+	public UsuariosDao() {
+		super();
+	}
+
+
+
+
+	public Usuario buscarPorUsername(String username) {
+	    Connection con = null;
+	    PreparedStatement ps = null;
+	    ResultSet rs = null;	
+		
+	    try {
+	        con = ConexionDB.conectar();
+	        String sql = "SELECT * FROM usuarios WHERE usuario = ?";
+	        ps = con.prepareStatement(sql);
+	        ps.setString(1, username);
+	        rs = ps.executeQuery();
+
+	        if (rs.next()) {
+	            Usuario user = new Usuario();
+	            
+	            user.setId(rs.getInt("id")); 
+	            user.setNombre(rs.getString("usuario"));
+	            user.setApellido(rs.getString("apellido"));
+	            user.setCorreoElectronico(rs.getString("correo"));
+	            user.setContrasenia(rs.getString("contrasenia"));
+	            user.setNumeroDeCuenta(rs.getString("numeroDeCuenta"));
+	            user.setRol(rs.getString("rol"));
+	            
+	            user.setSaldo(0.0); 
+	            
+	            return user;
+	        }
+	        throw new CredencialesInvalidasException("El usuario introducido no existe");
+	    } catch (SQLException e) {
+	    	throw new PersistenciaException("Error al consultar usuario en base de datos");
+	    } finally {
+	        ConexionDB.cerrar(con);
+	    }
+	}
+	
+	
+	public void verificarPassword(String passwordIntroducida, String passwordBaseDatos) {
+
+        if (!passwordIntroducida.equals(passwordBaseDatos)) {
+            throw new CredencialesInvalidasException("La contraseña introducida es incorrecta.");
+        }
+    }
+	
 	public Usuario validarUsuario(String usuario, String contrasenia) {
 	    Connection con = null;
 	    PreparedStatement ps = null;
@@ -34,7 +87,7 @@ public class UsuariosDao {
 	            return user;
 	        }
 	    } catch (SQLException e) {
-	        System.out.println("ERROR SQL al validar: " + e.getMessage());
+	    	throw new PersistenciaException("No se ha validado correctamente al usuario");
 	    } finally {
 	        ConexionDB.cerrar(con);
 	    }

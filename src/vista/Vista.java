@@ -98,6 +98,7 @@ public class Vista {
             return Integer.parseInt(sc.nextLine());
         } catch (DatoInvalidoException e) {
         	//throw new NumberFormatException("ERROR Se ha introducido un valor no valido");
+        	System.err.println("Por favor introduzca una opción valida");
         	return -1;
         }
     }

@@ -12,17 +12,22 @@ import modelo.Usuario;
 public class Login {
 
 	private UsuariosDao uDao;
-	
+	//private Usuario u;
 	
 	
 	public Login() {
 		super();
-		uDao = new UsuariosDao();
-		
+		this.uDao = new UsuariosDao();
+		//u = new Usuario(null, null, null, null, null, 0, null, 0);
 	}
 
-	public Usuario inicioDeSesion(String usuario, String contrasenia) {
-		return uDao.validarUsuario(usuario, contrasenia);
+	public Usuario inicioDeSesion(String username, String password) {
+		
+		Usuario u = uDao.buscarPorUsername(username);
+		
+		uDao.verificarPassword(password, u.getContrasenia());
+		
+		return uDao.validarUsuario(username, password);
 	}
 	
 	

@@ -67,30 +67,34 @@ public class Controlador {
 	}
 
 	private void procesarIniciarSesion() {
-	    boolean sesionIniciada = false;
+	    try {
+	        boolean sesionIniciada = false;
 
-	    for (int i = 0; i < intentosRestantes; i++) {
-	        String nombre = vista.pedirNombre();
-	        String contrasenia = vista.pedirContrasenia();
+	        for (int i = 0; i < intentosRestantes; i++) {
+	            String nombre = vista.pedirNombre();
+	            String contrasenia = vista.pedirContrasenia();
 
-	        usuario = login.inicioDeSesion(nombre, contrasenia);
+	            // Si falla el usuario o contraseña saltará al catch de abajo automáticamente
+	            usuario = login.inicioDeSesion(nombre, contrasenia);
 
-	        if (usuario != null) {
+	            // Si llega a esta línea es que el inicio de sesión fue buueno
 	            vista.mostrarMensaje("Bienvenido " + usuario.getNombre());
 	            sesionIniciada = true;
 	            procesarRedirigirSegunRol();
-	            break;
-	        } else {
-	            int intentosQueLeQuedan = intentosRestantes - (i + 1);
-	            if (intentosQueLeQuedan > 0) {
-	                vista.mostrarMensaje("Credenciales incorrectas. Te quedan " + intentosQueLeQuedan + " intentos.");
-	            }
+	            break; 
 	        }
-	    }
 
-	    if (!sesionIniciada) {
-	        vista.mostrarMensaje("ERROR: Has superado el límite de intentos permitidos. Acceso denegado.");
-	        
+	        // Si se agotan los intentos del bucle y la sesión sigue en false mostramos un mensaje de error
+	        if (!sesionIniciada) {
+	            throw new excepciones.seguridad.SesionNoIniciadaException("ERROR: Has superado el límite de intentos permitidos. Acceso denegado.");
+	        }
+
+	    } catch (excepciones.seguridad.CredencialesInvalidasException e) {
+	        // Captura los errores de credenciales que vengan del Login/DAO
+	        vista.mostrarMensaje("Error en las credenciales: " + e.getMessage());
+	    } catch (excepciones.seguridad.SesionNoIniciadaException e) {
+	        // Captura el bloqueo definitivo al agotar los 3 intentos
+	        vista.mostrarMensaje(e.getMessage());
 	    }
 	}
 

@@ -195,7 +195,7 @@ public class CuentasDao {
 	 * Registramos en el historial de movimientos el movimiento realizado por
 	 * cualquier cuenta
 	 */
-	public boolean registrarMovimiento(String numCuenta, String tipo, double cantidad) {
+	public boolean registrarMovimiento(String numCuenta, String tipo, double cantidad) throws SQLException {
 		Connection con = null;
 		String sql = "INSERT INTO movimientos (numeroCuenta, tipo, cantidad, fecha) VALUES (?, ?, ?, NOW())";
 
@@ -208,8 +208,9 @@ public class CuentasDao {
 
 			return ps.executeUpdate() > 0;
 		} catch (SQLException | NumberFormatException e) {
-			System.out.println("Error al registrar movimiento: " + e.getMessage());
-			return false;
+			throw new SQLException("Ha reventao en el metodo registrar movimiento");
+			//System.out.println("Error al registrar movimiento: " + e.getMessage());
+			//return false;
 		} finally {
 			ConexionDB.cerrar(con);
 		}

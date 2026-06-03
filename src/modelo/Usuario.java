@@ -17,6 +17,13 @@ public class Usuario {
 	private String rol;
 	private int id;
 	
+	
+	
+	
+	public Usuario() {
+		super();
+	}
+
 	public Usuario(String numeroDeCuenta, String nombre, String apellido, String correoElectronico,
 			String contrasenia, double saldo, String rol, int id) {
 		super();
