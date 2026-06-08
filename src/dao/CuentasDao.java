@@ -7,6 +7,8 @@ import java.util.List;
 import modelo.CuentaBancaria;
 import vista.Vista;
 import modelo.DatosCliente;
+import excepciones.persistencia.PersistenciaException;
+import excepciones.seguridad.CuentaNoEncontradaException;
 
 public class CuentasDao {
 
@@ -18,7 +20,6 @@ public class CuentasDao {
 		super();
 		vista = new Vista();
 		datos = new DatosCliente(0, null, null, null, null, null);
-		// cuenta = new CuentaBancaria(null, null, 0, 0, null);
 
 	}
 
@@ -38,7 +39,7 @@ public class CuentasDao {
 						rs.getDouble("saldo"), 0.0, null));
 			}
 		} catch (SQLException e) {
-			System.out.println("Error al obtener cuentas: " + e.getMessage());
+			throw new PersistenciaException("Error al obtener las cuentas del usuario", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
@@ -57,9 +58,13 @@ public class CuentasDao {
 			PreparedStatement ps = con.prepareStatement(sql);
 			ps.setDouble(1, cantidad);
 			ps.setLong(2, Long.parseLong(numCuenta));
-			return ps.executeUpdate() > 0;
+			
+			if (ps.executeUpdate() == 0) {
+				throw new CuentaNoEncontradaException("No se pudo actualizar el saldo: la cuenta no existe.");
+			}
+			return true;
 		} catch (SQLException e) {
-			return false;
+			throw new PersistenciaException("Error crítico en la base de datos al actualizar el saldo", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
@@ -80,8 +85,7 @@ public class CuentasDao {
 			ps.setString(3, nombre);
 			return ps.executeUpdate() > 0;
 		} catch (SQLException e) {
-			System.out.println("Error SQL al crear cuenta: " + e.getMessage());
-			return false;
+			throw new PersistenciaException("Error al crear la cuenta bancaria", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
@@ -106,14 +110,16 @@ public class CuentasDao {
 			if (rs.next()) {
 				cuenta = new CuentaBancaria(rs.getString("nombre"), String.valueOf(rs.getInt("numeroCuenta")),
 						rs.getDouble("saldo"), 0.0, null);
+				return cuenta;
 			}
+			
+			throw new CuentaNoEncontradaException("La cuenta destino (" + numCuenta + ") no existe.");
+
 		} catch (SQLException e) {
-			System.out.println("Error al obtener cuenta: " + e.getMessage());
+			throw new PersistenciaException("Error al consultar la cuenta por número", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
-
-		return cuenta;
 	}
 
 	/*
@@ -124,20 +130,18 @@ public class CuentasDao {
 		List<String> historial = new ArrayList<>();
 		Connection con = null;
 		String sql = "SELECT tipo, cantidad, fecha FROM movimientos WHERE numeroCuenta = ? ORDER BY fecha DESC";
-
 		try {
 			con = ConexionDB.conectar();
 			PreparedStatement ps = con.prepareStatement(sql);
 			ps.setLong(1, Long.parseLong(numCuenta));
 			ResultSet rs = ps.executeQuery();
-
 			while (rs.next()) {
 				String fila = rs.getTimestamp("fecha") + " | " + rs.getString("tipo") + " | " + rs.getDouble("cantidad")
 						+ "€";
 				historial.add(fila);
 			}
 		} catch (SQLException | NumberFormatException e) {
-			System.out.println("Error al consultar movimientos: " + e.getMessage());
+			throw new PersistenciaException("Error al recuperar el historial de movimientos", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
@@ -158,7 +162,7 @@ public class CuentasDao {
 			ResultSet rsUser = psUser.executeQuery();
 
 			if (!rsUser.next()) {
-				return null;
+				throw new CuentaNoEncontradaException("El cliente buscado no existe.");
 			}
 
 			int idUsuario = rsUser.getInt("id");
@@ -166,7 +170,6 @@ public class CuentasDao {
 			String apellido = rsUser.getString("apellido");
 			String correo = rsUser.getString("correo");
 			String rol = rsUser.getString("rol");
-
 			List<CuentaBancaria> cuentas = new ArrayList<>();
 			String sqlCuentas = "SELECT numeroCuenta, nombre, saldo, activa FROM CuentaBancaria WHERE idUsuario = ?";
 			PreparedStatement psCuentas = con.prepareStatement(sqlCuentas);
@@ -176,26 +179,21 @@ public class CuentasDao {
 			while (rsCuentas.next()) {
 				cuentas.add(new CuentaBancaria(rsCuentas.getString("nombre"),
 						String.valueOf(rsCuentas.getLong("numeroCuenta")), rsCuentas.getDouble("saldo"), 0.0, null));
-
 			}
 			return new DatosCliente(idUsuario, nombre, apellido, correo, rol, cuentas);
 
-		}
-
-		catch (SQLException e) {
-			System.out.println("Error al obtener datos del cliente: " + e.getMessage());
-			return null;
+		} catch (SQLException e) {
+			throw new PersistenciaException("Error al extraer los datos completos del cliente", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
-
 	}
 
 	/*
 	 * Registramos en el historial de movimientos el movimiento realizado por
 	 * cualquier cuenta
 	 */
-	public boolean registrarMovimiento(String numCuenta, String tipo, double cantidad) throws SQLException {
+	public boolean registrarMovimiento(String numCuenta, String tipo, double cantidad) {
 		Connection con = null;
 		String sql = "INSERT INTO movimientos (numeroCuenta, tipo, cantidad, fecha) VALUES (?, ?, ?, NOW())";
 
@@ -208,9 +206,7 @@ public class CuentasDao {
 
 			return ps.executeUpdate() > 0;
 		} catch (SQLException | NumberFormatException e) {
-			throw new SQLException("Ha reventao en el metodo registrar movimiento");
-			//System.out.println("Error al registrar movimiento: " + e.getMessage());
-			//return false;
+			throw new PersistenciaException("Error al registrar movimiento en el historial", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}

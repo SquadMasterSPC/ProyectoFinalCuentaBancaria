@@ -54,7 +54,7 @@ public class UsuariosDao {
 	public void verificarPassword(String passwordIntroducida, String passwordBaseDatos) {
 
         if (!passwordIntroducida.equals(passwordBaseDatos)) {
-            throw new CredencialesInvalidasException("La contraseña introducida es incorrecta.");
+            throw new CredencialesInvalidasException("El usuario o la contraseña introducidos son incorrectos");
         }
     }
 	

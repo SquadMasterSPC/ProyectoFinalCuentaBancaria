@@ -169,24 +169,18 @@ public class Vista {
     }
     
     public Double pedirCantidadDinero() {
-        System.out.println("Ingrese la cantidad: ");
-        
-        /*
-         * if (!sc.hasNextDouble()) {
-         * 			return null;
-		 *	}
-         */
-
-        
-        double cantidad = sc.nextDouble();
-        
-        while (!validacion.validarDineroAOperar(cantidad)) {
-            System.err.println("ERROR Has ingresado una cantidad de dinero o caracter no permitido");
-            sc.next();
+        while (true) {
+            try {
+                System.out.println("Ingrese la cantidad: ");
+                String entrada = sc.nextLine();
+                
+                Double cantidad = Double.parseDouble(entrada);
+                return cantidad;
+                
+            } catch (NumberFormatException e) {
+                System.out.println("ERROR Has ingresado una cantidad de dinero o caracter no permitido");
+            }
         }
-        sc.nextLine();
-        return cantidad;
-      //  double cantidad = sc.nextDouble();
     }
     
     public void mostrarMensajeErrorInicioDeSesion() {

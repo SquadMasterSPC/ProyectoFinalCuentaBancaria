@@ -33,7 +33,6 @@ public class Controlador {
 	private Logica logica;
 	
 	private final int intentosRestantes = 3;
-	//private Scanner sc;
 
 	public Controlador() {
 		super();
@@ -48,7 +47,6 @@ public class Controlador {
 		vista = new Vista();
 		reintegro = new Reintegro(contraseniaUsuario, 0, null);
 		logica = new Logica();
-		//datosCliente = new DatosCliente(0, nombreUsuario, contraseniaUsuario, nombreUsuario, contraseniaUsuario, null);
 	}
 
 	public void ejecutar() {
@@ -74,26 +72,27 @@ public class Controlador {
 	            String nombre = vista.pedirNombre();
 	            String contrasenia = vista.pedirContrasenia();
 
-	            // Si falla el usuario o contraseña saltará al catch de abajo automáticamente
-	            usuario = login.inicioDeSesion(nombre, contrasenia);
-
-	            // Si llega a esta línea es que el inicio de sesión fue buueno
-	            vista.mostrarMensaje("Bienvenido " + usuario.getNombre());
-	            sesionIniciada = true;
-	            procesarRedirigirSegunRol();
-	            break; 
+	            try {
+	                usuario = login.inicioDeSesion(nombre, contrasenia);
+	                
+	                vista.mostrarMensaje("Bienvenido " + usuario.getNombre());
+	                sesionIniciada = true;
+	                procesarRedirigirSegunRol();
+	                break; 
+	                
+	            } catch (excepciones.seguridad.CredencialesInvalidasException e) {
+	                int restantes = intentosRestantes - (i + 1);
+	                if (restantes > 0) {
+	                    vista.mostrarMensaje(e.getMessage() + " (Intentos restantes: " + restantes + ")");
+	                }
+	            }
 	        }
 
-	        // Si se agotan los intentos del bucle y la sesión sigue en false mostramos un mensaje de error
 	        if (!sesionIniciada) {
 	            throw new excepciones.seguridad.SesionNoIniciadaException("ERROR: Has superado el límite de intentos permitidos. Acceso denegado.");
 	        }
 
-	    } catch (excepciones.seguridad.CredencialesInvalidasException e) {
-	        // Captura los errores de credenciales que vengan del Login/DAO
-	        vista.mostrarMensaje("Error en las credenciales: " + e.getMessage());
 	    } catch (excepciones.seguridad.SesionNoIniciadaException e) {
-	        // Captura el bloqueo definitivo al agotar los 3 intentos
 	        vista.mostrarMensaje(e.getMessage());
 	    }
 	}
@@ -209,59 +208,82 @@ public class Controlador {
 			opcion = vista.menuClientes();
 			switch (opcion) {
 			case 1: //Hacer ingreso
-				vista.mostrarMensaje("Escriba el dinero a ingresar en la cuenta: " + cuentaSeleccionada.getNumCuenta()+"\n");
-				Double cantidad = vista.pedirCantidadDinero();
-
-				if (ingreso.ingresar(cuentaSeleccionada, cantidad)) {
+				try {
+					vista.mostrarMensaje("Escriba el dinero a ingresar en la cuenta: " + cuentaSeleccionada.getNumCuenta()+"\n");
+					Double cantidad = vista.pedirCantidadDinero();
+					
+					ingreso.ingresar(cuentaSeleccionada, cantidad);
+					
+					cDao.actualizarSaldo(cuentaSeleccionada.getNumCuenta(), cantidad);
+					cDao.registrarMovimiento(cuentaSeleccionada.getNumCuenta(), "INGRESO", cantidad);
+					
 					vista.mostrarMensaje("Ingreso exitoso. Saldo: " + cuentaSeleccionada.getSaldo());
-				} else {
+				} catch (excepciones.vista.DatoInvalidoException e) {
+					vista.mostrarMensaje(e.getMessage());
+				} catch (excepciones.persistencia.PersistenciaException e) {
 					vista.mostrarMensaje("Error al realizar el ingreso. Cantidad no válida o error en BD.");
 				}
 				break;
 			case 2: //Hacer reintegro
-				vista.mostrarMensaje("Escriba el dinero a retirar de la cuenta: " + cuentaSeleccionada.getNumCuenta()+"\n");
-                Double cantRetirar = vista.pedirCantidadDinero();
-                
-                Double saldoCuenta = logica.validarSaldoCuenta(cuentaSeleccionada);
-                
-                
-                if (reintegro.retirar(cuentaSeleccionada, cantRetirar, saldoCuenta)) {
-                    vista.mostrarMensaje("Retirada completada. Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
-                } else {
-                    vista.mostrarMensaje("Error: Saldo insuficiente o cantidad no válida.");
-                }
-                break;
+				try {
+					vista.mostrarMensaje("Escriba el dinero a retirar de la cuenta: " + cuentaSeleccionada.getNumCuenta()+"\n");
+					Double cantRetirar = vista.pedirCantidadDinero();
+					Double saldoCuenta = logica.validarSaldoCuenta(cuentaSeleccionada);
+					
+					reintegro.retirar(cuentaSeleccionada, cantRetirar, saldoCuenta);
+					
+					cDao.actualizarSaldo(cuentaSeleccionada.getNumCuenta(), -cantRetirar);
+					cDao.registrarMovimiento(cuentaSeleccionada.getNumCuenta(), "REINTEGRO", cantRetirar);
+					
+					vista.mostrarMensaje("Retirada completada. Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
+				} catch (excepciones.vista.DatoInvalidoException | excepciones.modelo.SaldoInsuficienteException e) {
+					vista.mostrarMensaje(e.getMessage());
+				} catch (excepciones.persistencia.PersistenciaException e) {
+					vista.mostrarMensaje("Error: Saldo insuficiente o cantidad no válida.");
+				}
+				break;
 			case 3: //Hacer transferencia
-				vista.mostrarMensaje("--- Nueva Transferencia ---");
-                vista.mostrarMensaje("Cuenta origen: " + cuentaSeleccionada.getNumCuenta());
-                
-                int numeroCuentaDestino = vista.pedirInt();
-                Double cantTransferir = vista.pedirCantidadDinero();
-                
-                if (transferencia.realizarTransferencia(cuentaSeleccionada, numeroCuentaDestino, cantTransferir)) {
-                    vista.mostrarMensaje("Transferencia enviada con éxito.");
-                    vista.mostrarMensaje("Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
-                } else {
-                    vista.mostrarMensaje("Error: Fondos insuficientes o la cuenta destino no existe.");
-                }
-                break;
+				try {
+					vista.mostrarMensaje("--- Nueva Transferencia ---");
+					vista.mostrarMensaje("Cuenta origen: " + cuentaSeleccionada.getNumCuenta());
+					
+					int numeroCuentaDestino = vista.pedirInt();
+					Double cantTransferir = vista.pedirCantidadDinero();
+					
+					CuentaBancaria cuentaDestino = cDao.obtenerCuentaPorNumero(numeroCuentaDestino);
+					
+					transferencia.realizarTransferencia(cuentaSeleccionada, cuentaDestino, cantTransferir);
+					
+					cDao.actualizarSaldo(cuentaSeleccionada.getNumCuenta(), -cantTransferir);
+					cDao.actualizarSaldo(cuentaDestino.getNumCuenta(), cantTransferir);
+					cDao.registrarMovimiento(cuentaSeleccionada.getNumCuenta(), "TRANSFERENCIA ENVIADA", -cantTransferir);
+					cDao.registrarMovimiento(cuentaDestino.getNumCuenta(), "TRANSFERENCIA RECIBIDA", cantTransferir);
+					
+					vista.mostrarMensaje("Transferencia enviada con éxito.");
+					vista.mostrarMensaje("Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
+				} catch (excepciones.vista.DatoInvalidoException | excepciones.modelo.SaldoInsuficienteException | excepciones.seguridad.CuentaNoEncontradaException e) {
+					vista.mostrarMensaje(e.getMessage());
+				} catch (excepciones.persistencia.PersistenciaException e) {
+					vista.mostrarMensaje("Error: Fondos insuficientes o la cuenta destino no existe.");
+				}
+				break;
 			case 4: //Obtener saldo
 				vista.mostrarMensaje("Cuenta: " + cuentaSeleccionada.getNombre());
 				vista.mostrarMensaje("Su saldo es de: " + cuentaSeleccionada.getSaldo() + "€");
 				break;
 			case 5: //Redactar incidencias
-			    String desc = vista.pedirString("Describa su incidencia:");
-			    if (iDao.guardarIncidencia(usuario.getId(), usuario.getNombre(), desc)) {
-			        vista.mostrarMensaje("Incidencia registrada con éxito.");
-			    } else {
-			        vista.mostrarMensaje("Error al registrar incidencia.");
-			    }
-			    break;
+				String desc = vista.pedirString("Describa su incidencia:");
+				if (iDao.guardarIncidencia(usuario.getId(), usuario.getNombre(), desc)) {
+					vista.mostrarMensaje("Incidencia registrada con éxito.");
+				} else {
+					vista.mostrarMensaje("Error al registrar incidencia.");
+				}
+				break;
 			case 6: // Historial de movimientos
 				List<String> movs = cDao.obtenerHistorialMovimientos(cuentaSeleccionada.getNumCuenta());
-			    vista.mostrarHistorial(movs);
-			    break;
-			    
+				vista.mostrarHistorial(movs);
+				break;
+				
 			case 7: //salir
 				vista.mostrarMensaje("Volviendo a selección de cuenta...");
 				break;
