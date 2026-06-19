@@ -9,6 +9,10 @@ import modelo.CuentaBancaria;
 import modelo.DatosCliente;
 //import modelo.Usuario;
 
+/**
+ * Es la cara visible de la aplicación se encarga de pintar todos los menús por la consola 
+ * y de recoger lo que el usuario teclea, controlando que no meta letras donde van números
+ */
 public class Vista {
     private Scanner sc;
     private Validacion validacion;
@@ -25,198 +29,200 @@ public class Vista {
     }
 
     public String pedirNombre() {
-    	String nombre;
+        String nombre;
     
-    	System.out.println("Introduce tu nombre: ");
+        System.out.println("Introduce tu nombre: ");
         nombre = sc.nextLine();
 
         if (validacion.validarCredencialesString(nombre)) {
-			return nombre;
-		}
+            return nombre;
+        }
         else {
-        	mensajeErrorCrearCuenta();
-        	return null;
-		}
+            mensajeErrorCrearCuenta();
+            return null;
+        }
     }
     
     public String pedirApellido() {
-    	String apellido;
+        String apellido;
         
-    	System.out.println("Introduce tu apellido: ");
+        System.out.println("Introduce tu apellido: ");
         apellido = sc.nextLine();
 
         if (validacion.validarCredencialesString(apellido)) {
-			return apellido;
-		}
+            return apellido;
+        }
         else {
-        	mensajeErrorCrearCuenta();
-        	return null;
-		}
+            mensajeErrorCrearCuenta();
+            return null;
+        }
     }
     
     public String pedirCorreo() {
-    	String correo;
+        String correo;
     
         System.out.print("Introduce tu correo electrónico: ");
-    	correo = sc.nextLine();
+        correo = sc.nextLine();
         if(validacion.validarCorreos(correo)) {
-        	System.out.println("Correo validado correctamente");
+            System.out.println("Correo validado correctamente");
             return correo;
         }
         else {
-        	System.out.println("Se ha introducido incorrectamente el correo");
-        	mensajeErrorCrearCuenta();
+            System.out.println("Se ha introducido incorrectamente el correo");
+            mensajeErrorCrearCuenta();
      
-        	return null;
-		}
+            return null;
+        }
 
     }
 
     public String pedirContrasenia() {
-    	String contrasenia;
-    	
+        String contrasenia;
+        
         System.out.print("Introduce tu contraseña: ");
         contrasenia = sc.nextLine();
 
         if (validacion.validarCredencialesString(contrasenia)) {
-			return contrasenia;
-		}
+            return contrasenia;
+        }
         else {
-        	mensajeErrorCrearCuenta();
-        	return null;
-		}
+            mensajeErrorCrearCuenta();
+            return null;
+        }
         
     }
     
     public int inicioDelSistema() {
-    	System.out.println("BIENVENIDO\n");
-    	System.out.println("Seleccione la opción que quiera realizar\n");
-    	System.out.println("1. Iniciar sesión\n");
-    	System.out.println("2. Crear nuevo USUARIO\n");
-    	
-    	try {
+        System.out.println("BIENVENIDO\n");
+        System.out.println("Seleccione la opción que quiera realizar\n");
+        System.out.println("1. Iniciar sesión\n");
+        System.out.println("2. Crear nuevo USUARIO\n");
+        
+        try {
             return Integer.parseInt(sc.nextLine());
-        } catch (DatoInvalidoException e) {
-        	//throw new NumberFormatException("ERROR Se ha introducido un valor no valido");
-        	return -1;
+        } catch (NumberFormatException e) {
+            System.err.println("Por favor introduzca una opción valida");
+            return -1;
         }
     }
     
     public void mensajeIniciarSesion() {
-    	System.out.println("Es un gusto tenerte de vuelta");
+        System.out.println("Es un gusto tenerte de vuelta");
     }
     
     public void mensajeCrearCuenta() {
-    	System.out.println("Gracias por elegirnos");
+        System.out.println("Gracias por elegirnos");
     }
     
     public int menuClientes() {
-    	System.out.println("MENÚ PRINCIPAL\n");
-    	System.out.println("Seleccione la opción que quiera realizar\n");
-    	System.out.println("1. Ingreso\n");
-    	System.out.println("2. Reintegro\n");
-    	System.out.println("3. Transferencia\n");
-    	System.out.println("4. Consultar saldo\n");
-    	System.out.println("5. Redactar incidencia\n");
-    	System.out.println("6. Ver Historial de movmientos\n");
-    	System.out.println("7. Cerrar sesión\n");
-    	
-    	try {
+        System.out.println("MENÚ PRINCIPAL\n");
+        System.out.println("Seleccione la opción que quiera realizar\n");
+        System.out.println("1. Ingreso\n");
+        System.out.println("2. Reintegro\n");
+        System.out.println("3. Transferencia\n");
+        System.out.println("4. Consultar saldo\n");
+        System.out.println("5. Redactar incidencia\n");
+        System.out.println("6. Ver Historial de movmientos\n");
+        System.out.println("7. Cerrar sesión\n");
+        
+        try {
             return Integer.parseInt(sc.nextLine());
         } catch (NumberFormatException e) {
+            System.err.println("Por favor introduzca una opción valida");
             return -1;
         }
     }
     
     public boolean reintentarCrearCuenta() {
-    	String opcion;
-    	
-    	System.out.println("Quieres intentar de nuevo crear una cuenta\n");
-    	System.out.println("Responde SI o NO\n");
-    	opcion = sc.nextLine();
-    	
-    	return validacion.validarReintentoCuenta(opcion);
+        String opcion;
+        
+        System.out.println("Quieres intentar de nuevo crear una cuenta\n");
+        System.out.println("Responde SI o NO\n");
+        opcion = sc.nextLine();
+        
+        return validacion.validarReintentoCuenta(opcion);
     }
     
     public void mensajeErrorCrearCuenta() {
-    	System.err.println("ERROR no se ha podido crear la cuenta");
+        System.err.println("ERROR no se ha podido crear la cuenta");
     }
     
     public String redactarIncidencia() {
-    	String incidencia;
-    	
-    	System.out.println("Ingrese su incidencia");
-    	incidencia = sc.nextLine();
-    	
-    	return incidencia;
+        String incidencia;
+        
+        System.out.println("Ingrese su incidencia");
+        incidencia = sc.nextLine();
+        
+        return incidencia;
     }
     
     public int mostrarMenuEmpleados() {
-    	System.out.println("MENÚ DE EMPLEADOS");
-    	System.out.println("1. Leer incidencias pendientes");
-    	System.out.println("2. Leer todas las incidencia");
-    	System.out.println("3. Atender incidencia");
-    	System.out.println("4. Ver historial de movimientos de cuentas");
-    	System.out.println("5. Ver datos de usuarios");
-    	System.out.println("6. Cerrar Sesión");
-    	
-    	try {
+        System.out.println("MENÚ DE EMPLEADOS");
+        System.out.println("1. Leer incidencias pendientes");
+        System.out.println("2. Leer todas las incidencia");
+        System.out.println("3. Atender incidencia");
+        System.out.println("4. Ver historial de movimientos de cuentas");
+        System.out.println("5. Ver datos de usuarios");
+        System.out.println("6. Cerrar Sesión");
+        
+        try {
             return Integer.parseInt(sc.nextLine());
         } catch (NumberFormatException e) {
+            System.err.println("Por favor introduzca una opción valida");
             return -1;
         }
     }
     
     public Double pedirCantidadDinero() {
-        System.out.println("Ingrese la cantidad: ");
-        
-        /*
-         * if (!sc.hasNextDouble()) {
-         * 			return null;
-		 *	}
-         */
-
-        
-        double cantidad = sc.nextDouble();
-        
-        while (!validacion.validarDineroAOperar(cantidad)) {
-            System.err.println("ERROR Has ingresado una cantidad de dinero o caracter no permitido");
-            sc.next();
+        while (true) {
+            try {
+                System.out.println("Ingrese la cantidad: ");
+                String entrada = sc.nextLine();
+                entrada = entrada.replace(",", ".");
+                
+                Double cantidad = Double.parseDouble(entrada);
+                return cantidad;
+                
+            } catch (NumberFormatException e) {
+                System.out.println("ERROR Has ingresado una cantidad de dinero o caracter no permitido. Intente de nuevo.");
+            }
         }
-        sc.nextLine();
-        return cantidad;
-      //  double cantidad = sc.nextDouble();
     }
     
     public void mostrarMensajeErrorInicioDeSesion() {
-    	System.err.println("ERROR Usuario o contraseña incorrecto");
+        System.err.println("ERROR Usuario o contraseña incorrecto");
     }
     
     public void mensajeIncidenciaEliminada() {
-    	System.out.println("Incidencia atendida");
+        System.out.println("Incidencia atendida");
     }
     
     public void mensajeCierreSesion() {
-    	System.out.println("Cerrando la sesión...");
+        System.out.println("Cerrando la sesión...");
     }
     
     public void mensajeNingunaIncidencia() {
-    	System.out.println("No hay ninguna incidencia por el momento");
+        System.out.println("No hay ninguna incidencia por el momento");
     }
     
     public int menuSeleccionCuenta() {
-    	System.out.println("Elija la opción que quiera");
-    	System.out.println("1. Iniciar sesión");
-    	System.out.println("2. Crear una nueva cuenta");
-    	System.out.println("3. Salir");
-    	String opcion = sc.nextLine();
-    	int numero = Integer.parseInt(opcion);
-    	
-    	return numero;
+        System.out.println("Elija la opción que quiera");
+        System.out.println("1. Iniciar sesión");
+        System.out.println("2. Crear una nueva cuenta");
+        System.out.println("3. Salir");
+        
+        try {
+            return Integer.parseInt(sc.nextLine());
+        } catch (NumberFormatException e) {
+            System.err.println("Por favor introduzca una opción valida");
+            return -1;
+        }
     }
     
     /**
-     * Muestra las cuentas disponibles del usuario y le permite seleccionar una
+     * Le muestra al usuario su lista de cuentas y le obliga a elegir una de forma válida
+     * @param cuentas La lista de cuentas que le pertenecen a este cliente
+     * @return La CuentaBancaria que ha seleccionado, o null si se equivoca repetidamente
      */
     public CuentaBancaria elegirCuentaEntreLista(List<CuentaBancaria> cuentas) {
         System.out.println("\n-------------------------------------------");
@@ -234,18 +240,16 @@ public class Vista {
         
         try {
             String entrada = sc.nextLine();
-            if (entrada.isEmpty()) { entrada = sc.nextLine(); }
-            
             int seleccion = Integer.parseInt(entrada);
             
             if (seleccion >= 1 && seleccion <= cuentas.size()) {
                 return cuentas.get(seleccion - 1);
             } else {
-                System.err.println("Opción no válida. Esa cuenta no existe en la lista.");
+                System.err.println("Opción no válida esa cuenta no existe");
                 return null;
             }
         } catch (Exception e) {
-            System.err.println("Error: Por favor, introduzca un número válido.");
+            System.err.println("Error por favor introduzca un número válido");
             return null;
         }
     }
@@ -253,11 +257,6 @@ public class Vista {
     public String pedirNombreCuenta() {
         String nombre;
         boolean valido = false;
-        
-        // Limpieza de buffer: Si hay un salto de línea pendiente, lo consumimos
-        if (sc.hasNextLine()) {
-            sc.nextLine(); 
-        }
         
         do {
             System.out.println("\nIntroduce un nombre para identificar la nueva cuenta:");
@@ -267,7 +266,7 @@ public class Vista {
             if (nombre != null && !nombre.trim().isEmpty()) {
                 valido = true;
             } else {
-                System.err.println("El nombre de la cuenta no puede estar vacío.");
+                System.err.println("El nombre de la cuenta no puede estar vacío");
             }
         } while (!valido);
 
@@ -275,14 +274,15 @@ public class Vista {
     }
 
     public int pedirInt() {
-        System.out.println("Ingrese el número correspondiente: ");
-        while (!sc.hasNextInt()) {
-            System.out.println("Por favor, introduzca un número válido.");
-            sc.next();
+        while (true) {
+            try {
+                System.out.println("Ingrese el número correspondiente: ");
+                String entrada = sc.nextLine();
+                return Integer.parseInt(entrada);
+            } catch (NumberFormatException e) {
+                System.out.println("Por favor introduzca un número válido");
+            }
         }
-        int numero = sc.nextInt();
-        sc.nextLine();
-        return numero;
     }
     
     public String pedirString(String mensaje) {
@@ -308,39 +308,35 @@ public class Vista {
     }
     
     public void mostrarDatosCompletosCliente(DatosCliente datos) {
-    	if (datos == null) {
-			System.err.println("ERROR no se ha encontrado a ningún usuario con esos datos");
-			return;
-    	}
-    	
-    	System.out.println("\n===================");
-    	System.out.println("INFORMACIÓN DEL CLIENTE");
-    	System.out.println();
-    	System.out.println("Id: "+datos.getId());
-    	System.out.println("Nombre: "+datos.getNombre());
-    	System.out.println("Apellido: "+datos.getApellido());
-    	System.out.println("Correo: "+datos.getCorreo());
-    	System.out.println("Rol: "+datos.getRol());
-    	System.out.println("=====================");
-    	System.out.println("CUENTAS ASOCIADAS");
-    	
-    	
-    	
-    	if(datos.getCuentas().isEmpty()) {
-    		System.err.println("ERROR No hay cuentas registradas con ese usuario");
-    	}
-    	else {
-			for(CuentaBancaria cBancaria : datos.getCuentas()) {
-				System.out.println("Nº: "+cBancaria.getNumCuenta()
-				+ " | Alias: "+cBancaria.getNombre()
-				+ " | Saldo: "+cBancaria.getSaldo()+" €");
-				
-			}
-			
-		}
+        if (datos == null) {
+            System.err.println("ERROR no se ha encontrado a ningún usuario con esos datos");
+            return;
+        }
+        
+        System.out.println("\n===================");
+        System.out.println("INFORMACIÓN DEL CLIENTE");
+        System.out.println();
+        System.out.println("Id: "+datos.getId());
+        System.out.println("Nombre: "+datos.getNombre());
+        System.out.println("Apellido: "+datos.getApellido());
+        System.out.println("Correo: "+datos.getCorreo());
+        System.out.println("Rol: "+datos.getRol());
+        System.out.println("=====================");
+        System.out.println("CUENTAS ASOCIADAS");
+        
+        if(datos.getCuentas().isEmpty()) {
+            System.err.println("ERROR No hay cuentas registradas con ese usuario");
+        }
+        else {
+            for(CuentaBancaria cBancaria : datos.getCuentas()) {
+                System.out.println("Nº: "+cBancaria.getNumCuenta()
+                + " | Alias: "+cBancaria.getNombre()
+                + " | Saldo: "+cBancaria.getSaldo()+" €");
+            }
+        }
     }
     
     public void mensajeErrorCaracterIngresado() {
-    	System.err.println("ERROR has introducido un caracter invalido");
+        System.err.println("ERROR has introducido un caracter invalido");
     }
 }

@@ -1,13 +1,19 @@
 package dao;
 
-import java.security.interfaces.RSAKey;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import modelo.CuentaBancaria;
 import vista.Vista;
 import modelo.DatosCliente;
+import excepciones.persistencia.PersistenciaException;
+import excepciones.seguridad.CuentaNoEncontradaException;
 
+
+/**
+ * Clase que se encarga de gestionar la persistencia de los datos
+ * de las cuentas y sus movimientos
+ */
 public class CuentasDao {
 
 	private CuentaBancaria cuenta;
@@ -18,10 +24,14 @@ public class CuentasDao {
 		super();
 		vista = new Vista();
 		datos = new DatosCliente(0, null, null, null, null, null);
-		// cuenta = new CuentaBancaria(null, null, 0, 0, null);
 
 	}
 
+	/**
+	 * Recupera todas las cuentas bancarias asociadas a un cliente específico
+	 * @param idUsuario El identificador único del usuario propietario de las cuentas
+	 * @return Una lista de objetos CuentaBancaria devolverá una lista vacía si no tiene cuentas
+	 */
 	public List<CuentaBancaria> obtenerCuentasPorUsuario(int idUsuario) {
 		List<CuentaBancaria> lista = new ArrayList<>();
 		Connection con = null;
@@ -38,16 +48,19 @@ public class CuentasDao {
 						rs.getDouble("saldo"), 0.0, null));
 			}
 		} catch (SQLException e) {
-			System.out.println("Error al obtener cuentas: " + e.getMessage());
+			throw new PersistenciaException("Error al obtener las cuentas del usuario", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
 		return lista;
 	}
 
-	/*
-	 * Actualizamos el valor del saldo de la cuenta seleccionada según
-	 * la operación elegida
+	/**
+	 * Modifica el saldo actual de una cuenta en la base de datos
+	 * @param numCuenta El identificador de la cuenta a actualizar
+	 * @param cantidad El importe a sumar (puede ser negativo para restarlo en reintegros o transferencias)
+	 * @return true si el saldo se actualizó correctamente
+	 * @throws excepciones.seguridad.CuentaNoEncontradaException si la cuenta no existe en el sistema
 	 */
 	public boolean actualizarSaldo(String numCuenta, double cantidad) {
 		Connection con = null;
@@ -57,17 +70,24 @@ public class CuentasDao {
 			PreparedStatement ps = con.prepareStatement(sql);
 			ps.setDouble(1, cantidad);
 			ps.setLong(2, Long.parseLong(numCuenta));
-			return ps.executeUpdate() > 0;
+			
+			if (ps.executeUpdate() == 0) {
+				throw new CuentaNoEncontradaException("No se pudo actualizar el saldo: la cuenta no existe.");
+			}
+			return true;
 		} catch (SQLException e) {
-			return false;
+			throw new PersistenciaException("Error crítico en la base de datos al actualizar el saldo", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
 	}
 
-	/*
-	 * Creamos una cuenta que le pertenecera a un usuario y se le asignara
-	 * un nombre y un numero de cuenta
+	/**
+	 * Inicia la creación de una cuenta bancaria en el sistema asociada a un cliente
+	 * @param idUsuario El identificador del cliente que será el titular
+	 * @param nombre El alias o nombre descriptivo de la cuenta
+	 * @param numAleatorio El número de cuenta bancaria generado para este registro
+	 * @return true si la inserción en la base de datos fue exitosa
 	 */
 	public boolean crearCuenta(int idUsuario, String nombre, long numAleatorio) {
 		Connection con = null;
@@ -80,16 +100,17 @@ public class CuentasDao {
 			ps.setString(3, nombre);
 			return ps.executeUpdate() > 0;
 		} catch (SQLException e) {
-			System.out.println("Error SQL al crear cuenta: " + e.getMessage());
-			return false;
+			throw new PersistenciaException("Error al crear la cuenta bancaria", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
 	}
 
-	/*
-	 * Obtenemos una cuenta bancaria de la base de datos utilizando
-	 * su número de cuenta
+	/**
+	 * Busca y devuelve los datos exactos de una cuenta bancaria a partir de su número identificador
+	 * @param numCuenta El número único de la cuenta
+	 * @return Un objeto CuentaBancaria con los datos extraídos de la base de datos
+	 * @throws excepciones.seguridad.CuentaNoEncontradaException Si no existe ninguna cuenta con ese número
 	 */
 	public CuentaBancaria obtenerCuentaPorNumero(int numCuenta) {
 		Connection con = null;
@@ -106,46 +127,51 @@ public class CuentasDao {
 			if (rs.next()) {
 				cuenta = new CuentaBancaria(rs.getString("nombre"), String.valueOf(rs.getInt("numeroCuenta")),
 						rs.getDouble("saldo"), 0.0, null);
+				return cuenta;
 			}
+			
+			throw new CuentaNoEncontradaException("La cuenta destino (" + numCuenta + ") no existe.");
+
 		} catch (SQLException e) {
-			System.out.println("Error al obtener cuenta: " + e.getMessage());
+			throw new PersistenciaException("Error al consultar la cuenta por número", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
-
-		return cuenta;
 	}
 
-	/*
-	 * Obtenemos todos los movimientos relacionados con la cuenta del cliente
-	 * seleccionada
+	/**
+	 * Extrae el registro cronológico de todas las operaciones realizadas en una cuenta específica
+	 * @param numCuenta El número de la cuenta a consultar
+	 * @return Una lista de cadenas de texto preformateadas con la fecha, tipo y cantidad de cada movimiento
 	 */
 	public List<String> obtenerHistorialMovimientos(String numCuenta) {
 		List<String> historial = new ArrayList<>();
 		Connection con = null;
 		String sql = "SELECT tipo, cantidad, fecha FROM movimientos WHERE numeroCuenta = ? ORDER BY fecha DESC";
-
 		try {
 			con = ConexionDB.conectar();
 			PreparedStatement ps = con.prepareStatement(sql);
 			ps.setLong(1, Long.parseLong(numCuenta));
 			ResultSet rs = ps.executeQuery();
-
 			while (rs.next()) {
 				String fila = rs.getTimestamp("fecha") + " | " + rs.getString("tipo") + " | " + rs.getDouble("cantidad")
 						+ "€";
 				historial.add(fila);
 			}
 		} catch (SQLException | NumberFormatException e) {
-			System.out.println("Error al consultar movimientos: " + e.getMessage());
+			throw new PersistenciaException("Error al recuperar el historial de movimientos", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
 		return historial;
 	}
 
-	/*
-	 * Permitimos que los empleados puedan sacar todos los datos del cliente
+	/**
+	 * Recopila toda la información de un cliente (datos personales y cuentas asociadas)
+	 * cruzando las tablas de usuarios y cuentas bancarias. Ideal para la vista de empleados
+	 * @param nombreBusqueda el nombre de usuario del cliente a consultar
+	 * @return Un objeto DatosCliente empaquetando toda su información
+	 * @throws excepciones.seguridad.CuentaNoEncontradaException Si el usuario no existe
 	 */
 	public DatosCliente mostrarDatosCompletosCliente(String nombreBusqueda) {
 		Connection con = null;
@@ -158,7 +184,7 @@ public class CuentasDao {
 			ResultSet rsUser = psUser.executeQuery();
 
 			if (!rsUser.next()) {
-				return null;
+				throw new CuentaNoEncontradaException("El cliente buscado no existe.");
 			}
 
 			int idUsuario = rsUser.getInt("id");
@@ -166,7 +192,6 @@ public class CuentasDao {
 			String apellido = rsUser.getString("apellido");
 			String correo = rsUser.getString("correo");
 			String rol = rsUser.getString("rol");
-
 			List<CuentaBancaria> cuentas = new ArrayList<>();
 			String sqlCuentas = "SELECT numeroCuenta, nombre, saldo, activa FROM CuentaBancaria WHERE idUsuario = ?";
 			PreparedStatement psCuentas = con.prepareStatement(sqlCuentas);
@@ -176,24 +201,22 @@ public class CuentasDao {
 			while (rsCuentas.next()) {
 				cuentas.add(new CuentaBancaria(rsCuentas.getString("nombre"),
 						String.valueOf(rsCuentas.getLong("numeroCuenta")), rsCuentas.getDouble("saldo"), 0.0, null));
-
 			}
 			return new DatosCliente(idUsuario, nombre, apellido, correo, rol, cuentas);
 
-		}
-
-		catch (SQLException e) {
-			System.out.println("Error al obtener datos del cliente: " + e.getMessage());
-			return null;
+		} catch (SQLException e) {
+			throw new PersistenciaException("Error al extraer los datos completos del cliente", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}
-
 	}
 
-	/*
-	 * Registramos en el historial de movimientos el movimiento realizado por
-	 * cualquier cuenta
+	/**
+	 * Guarda un nuevo apunte en el historial de movimientos de la cuenta
+	 * @param numCuenta El número de la cuenta afectada
+	 * @param tipo La descripción de la operación
+	 * @param cantidad El valor monetario operado
+	 * @return true si el registro se completó correctamente
 	 */
 	public boolean registrarMovimiento(String numCuenta, String tipo, double cantidad) {
 		Connection con = null;
@@ -208,8 +231,7 @@ public class CuentasDao {
 
 			return ps.executeUpdate() > 0;
 		} catch (SQLException | NumberFormatException e) {
-			System.out.println("Error al registrar movimiento: " + e.getMessage());
-			return false;
+			throw new PersistenciaException("Error al registrar movimiento en el historial", e);
 		} finally {
 			ConexionDB.cerrar(con);
 		}

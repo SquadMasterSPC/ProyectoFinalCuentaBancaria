@@ -4,7 +4,8 @@
 package modelo;
 
 /**
- * 
+ * Representa una cuenta física del banco Guarda su número de identificación 
+ * el alias que le pone el cliente y el dinero que contiene
  */
 public class CuentaBancaria {
 

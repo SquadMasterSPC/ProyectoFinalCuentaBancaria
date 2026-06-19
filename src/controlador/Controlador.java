@@ -2,20 +2,22 @@ package controlador;
 
 import modelo.*;
 import dao.UsuariosDao;
-import dao.ConexionDB;
 import dao.CuentasDao;
 import service.Login;
 import vista.Vista;
-import java.util.Scanner;
 import modelo.DatosCliente;
 import dao.IncidenciasDao;
 import logica.Logica;
+import service.OperacionesService;
+import service.CuentasService;
+import service.IncidenciasService;
 
-import java.security.PublicKey;
-import java.util.Iterator;
 import java.util.List;
 
-
+/**
+ * Es el centro de la aplicación, gestiona el flujo de la aplicación completa y
+ * va orquestando las interacciones entre el usuario y el programa
+ */
 public class Controlador {
 
 	private CuentaBancaria cBancaria;
@@ -31,9 +33,11 @@ public class Controlador {
 	private Vista vista;
 	private Reintegro reintegro;
 	private Logica logica;
+	private OperacionesService operacionesService;
+	private CuentasService cuentasService;
+	private IncidenciasService incidenciasService;
 	
 	private final int intentosRestantes = 3;
-	//private Scanner sc;
 
 	public Controlador() {
 		super();
@@ -48,9 +52,15 @@ public class Controlador {
 		vista = new Vista();
 		reintegro = new Reintegro(contraseniaUsuario, 0, null);
 		logica = new Logica();
-		//datosCliente = new DatosCliente(0, nombreUsuario, contraseniaUsuario, nombreUsuario, contraseniaUsuario, null);
+		this.operacionesService = new OperacionesService(this.cDao);
+		this.cuentasService = new CuentasService(cDao);
+		this.incidenciasService = new IncidenciasService(iDao);
 	}
 
+	/**
+	 * Inicia el bucle de la aplicacón lanzando el menu de bienvenida
+	 * y te permite iniciar sesión o crear un nuevo usuario en la app
+	 */
 	public void ejecutar() {
 		int opcion;
 		do {
@@ -66,34 +76,50 @@ public class Controlador {
 		} while (opcion != 0);
 	}
 
+	/**
+	 * Gestiona la identificación de los usuarios en el sistema, te permite
+	 * un número limitado de intentos para iniciar la sesión
+	 * si es exitoso delega el control al menú correspondiente según el rol
+	 * del usuario
+	 */
 	private void procesarIniciarSesion() {
-	    boolean sesionIniciada = false;
+	    try {
+	        boolean sesionIniciada = false;
 
-	    for (int i = 0; i < intentosRestantes; i++) {
-	        String nombre = vista.pedirNombre();
-	        String contrasenia = vista.pedirContrasenia();
+	        for (int i = 0; i < intentosRestantes; i++) {
+	            String nombre = vista.pedirNombre();
+	            String contrasenia = vista.pedirContrasenia();
 
-	        usuario = login.inicioDeSesion(nombre, contrasenia);
-
-	        if (usuario != null) {
-	            vista.mostrarMensaje("Bienvenido " + usuario.getNombre());
-	            sesionIniciada = true;
-	            procesarRedirigirSegunRol();
-	            break;
-	        } else {
-	            int intentosQueLeQuedan = intentosRestantes - (i + 1);
-	            if (intentosQueLeQuedan > 0) {
-	                vista.mostrarMensaje("Credenciales incorrectas. Te quedan " + intentosQueLeQuedan + " intentos.");
+	            try {
+	                usuario = login.inicioDeSesion(nombre, contrasenia);
+	                
+	                vista.mostrarMensaje("Bienvenido " + usuario.getNombre());
+	                sesionIniciada = true;
+	                procesarRedirigirSegunRol();
+	                break; 
+	                
+	            } catch (excepciones.seguridad.CredencialesInvalidasException e) {
+	                int restantes = intentosRestantes - (i + 1);
+	                if (restantes > 0) {
+	                    vista.mostrarMensaje(e.getMessage() + " (Intentos restantes: " + restantes + ")");
+	                }
 	            }
 	        }
-	    }
 
-	    if (!sesionIniciada) {
-	        vista.mostrarMensaje("ERROR: Has superado el límite de intentos permitidos. Acceso denegado.");
-	        
+	        if (!sesionIniciada) {
+	            throw new excepciones.seguridad.SesionNoIniciadaException("ERROR: Has superado el límite de intentos permitidos. Acceso denegado.");
+	        }
+
+	    } catch (excepciones.seguridad.SesionNoIniciadaException e) {
+	        vista.mostrarMensaje(e.getMessage());
 	    }
 	}
 
+	/**
+	 * Revisa el rol del usuario y según sea el que tenga el usuario inciado
+	 * activa un menú con unas opciones u otras permitiendo diversas
+	 * funciones entre roles
+	 */
 	private void procesarRedirigirSegunRol() {
 		String rol = usuario.getRol();
 		if ("ADMIN".equalsIgnoreCase(rol)) {
@@ -103,9 +129,9 @@ public class Controlador {
 			do {
 				opcionEmpleado = vista.mostrarMenuEmpleados();
 				switch (opcionEmpleado) {
-				case 1:
+				case 1: //Leer solo incidencias pendientes
 					vista.mostrarMensaje("\n--- LISTA DE INCIDENCIAS PENDIENTES ---");
-					List<String> listaPendientes = iDao.obtenerIncidenciasPendientes();
+					List<String> listaPendientes = incidenciasService.obtenerIncidenciasPendientes();
 					if(listaPendientes.isEmpty()) {
 						vista.mensajeNingunaIncidencia();
 					} else {
@@ -113,11 +139,10 @@ public class Controlador {
 							vista.mostrarMensaje(s);
 						}
 					}
-
 					break;
-				case 2:
+				case 2: //Leer incidencias tanto atendidas como pendientes
 					vista.mostrarMensaje("\n--- LISTA DE INCIDENCIAS ---");
-					List<String> lista = iDao.leerIncidencias();
+					List<String> lista = incidenciasService.leerTodasIncidencias();
 					if (lista.isEmpty()) {
 						vista.mensajeNingunaIncidencia();
 					} else {
@@ -128,42 +153,35 @@ public class Controlador {
 					break;
 				case 3: // Atender incidencia
 				    vista.mostrarMensaje("--- INCIDENCIAS PENDIENTES DE ATENDER ---");
-				    List<String> pendientes = iDao.obtenerIncidenciasPendientes();
+				    List<String> pendientes = incidenciasService.obtenerIncidenciasPendientes();
 				    
 				    if (pendientes.isEmpty()) {
 				        vista.mostrarMensaje("No hay incidencias pendientes. ¡Buen trabajo!");
 				    } else {
-				        // Mostramos las incidencias pendientes
 				        for (String inc : pendientes) {
 				            System.out.println(inc);
 				        }
 				        
-				        // Pedimos el ID de la incidencia que quiere resolver
 				        int idIncidenciaAAtender = vista.pedirInt(); 
-				        
-				        // CORRECCIÓN: Usamos 'usuario', que es la variable real del login
 				        int idEmpleadoActivo = usuario.getId(); 
 				        
-				        System.out.println("DEBUG: Enviando al DAO -> idIncidencia: " + idIncidenciaAAtender + " | idEmpleado: " + idEmpleadoActivo);
-				        
-				        // Llamamos a tu método pasándole los datos en el orden correcto
-				        if (iDao.atenderIncidencias(idIncidenciaAAtender, idEmpleadoActivo)) {
+				        if (incidenciasService.atenderIncidencia(idIncidenciaAAtender, idEmpleadoActivo)) {
 				            vista.mostrarMensaje("Se ha resuelto la incidencia con éxito.");
 				        } else {
-				            vista.mostrarMensaje("No se pudo actualizar la incidencia. Verifica el ID.");
+				            vista.mostrarMensaje("No se pudo atender la incidencia revisa el ID");
 				        }
 				    }
 				    break;
 				case 4: // Ver movimientos de cualquier cuenta
 				    String cuentaABuscar = vista.pedirString("Introduzca el nº de cuenta a revisar: ");
-				    List<String> historialEmp = cDao.obtenerHistorialMovimientos(cuentaABuscar);
+				    // Reutilizamos el método que creamos para el cliente
+				    List<String> historialEmp = cuentasService.obtenerHistorial(cuentaABuscar);
 				    vista.mostrarHistorial(historialEmp);
 				    break;
 
 				case 5: // Ver datos de cliente y sus cuentas
 				    String clienteABuscar = vista.pedirString("Introduzca el nombre del cliente: ");
-				    DatosCliente datos = cDao.mostrarDatosCompletosCliente(clienteABuscar);
-				    //cDao.mostrarDatosCompletosCliente(clienteABuscar);
+				    DatosCliente datos = cuentasService.obtenerDatosCliente(clienteABuscar);
 				    vista.mostrarDatosCompletosCliente(datos);
 				    break;
 					
@@ -198,66 +216,79 @@ public class Controlador {
 		}
 	}
 
-
+	/**
+	 * Muestra y gestiona el menú de las operaciones para los clientes
+	 * @param cuentaSeleccionada La cuenta bancaria con la que el cliente ha iniciado sesión
+	 */
 	private void ejecutarMenuOperaciones(CuentaBancaria cuentaSeleccionada) {
 		int opcion;
 		do {
 			opcion = vista.menuClientes();
 			switch (opcion) {
-			case 1: //Hacer ingreso
-				vista.mostrarMensaje("Escriba el dinero a ingresar en la cuenta: " + cuentaSeleccionada.getNumCuenta()+"\n");
-				Double cantidad = vista.pedirCantidadDinero();
-
-				if (ingreso.ingresar(cuentaSeleccionada, cantidad)) {
-					vista.mostrarMensaje("Ingreso exitoso. Saldo: " + cuentaSeleccionada.getSaldo());
-				} else {
-					vista.mostrarMensaje("Error al realizar el ingreso. Cantidad no válida o error en BD.");
+			case 1: // Hacer ingreso
+				try {
+					vista.mostrarMensaje("Escriba el dinero a ingresar en la cuenta: " + cuentaSeleccionada.getNumCuenta() + "\n");
+					Double cantidad = vista.pedirCantidadDinero();
+					
+					operacionesService.procesarIngreso(cuentaSeleccionada, cantidad);
+					
+					vista.mostrarMensaje("Ingreso exitoso. Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
+					
+				} catch (excepciones.BancaAppException e) {
+					vista.mostrarMensaje("Error: " + e.getMessage());
 				}
 				break;
-			case 2: //Hacer reintegro
-				vista.mostrarMensaje("Escriba el dinero a retirar de la cuenta: " + cuentaSeleccionada.getNumCuenta()+"\n");
-                Double cantRetirar = vista.pedirCantidadDinero();
-                
-                Double saldoCuenta = logica.validarSaldoCuenta(cuentaSeleccionada);
-                
-                
-                if (reintegro.retirar(cuentaSeleccionada, cantRetirar, saldoCuenta)) {
-                    vista.mostrarMensaje("Retirada completada. Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
-                } else {
-                    vista.mostrarMensaje("Error: Saldo insuficiente o cantidad no válida.");
-                }
-                break;
-			case 3: //Hacer transferencia
-				vista.mostrarMensaje("--- Nueva Transferencia ---");
-                vista.mostrarMensaje("Cuenta origen: " + cuentaSeleccionada.getNumCuenta());
-                
-                int numeroCuentaDestino = vista.pedirInt();
-                Double cantTransferir = vista.pedirCantidadDinero();
-                
-                if (transferencia.realizarTransferencia(cuentaSeleccionada, numeroCuentaDestino, cantTransferir)) {
-                    vista.mostrarMensaje("Transferencia enviada con éxito.");
-                    vista.mostrarMensaje("Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
-                } else {
-                    vista.mostrarMensaje("Error: Fondos insuficientes o la cuenta destino no existe.");
-                }
-                break;
+			case 2: // Hacer reintegro
+				try {
+					vista.mostrarMensaje("Escriba el dinero a retirar de la cuenta: " + cuentaSeleccionada.getNumCuenta() + "\n");
+					Double cantRetirar = vista.pedirCantidadDinero();
+					Double saldoCuenta = logica.validarSaldoCuenta(cuentaSeleccionada);
+					
+					operacionesService.procesarReintegro(cuentaSeleccionada, cantRetirar, saldoCuenta);
+					
+					vista.mostrarMensaje("Retirada completada. Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
+					
+				} catch (excepciones.BancaAppException e) {
+					vista.mostrarMensaje("Error: " + e.getMessage());
+				}
+				break;
+
+			case 3: // Hacer transferencia
+				try {
+					vista.mostrarMensaje("--- Nueva Transferencia ---");
+					vista.mostrarMensaje("Cuenta origen: " + cuentaSeleccionada.getNumCuenta());
+					
+					int numeroCuentaDestino = vista.pedirInt();
+					Double cantTransferir = vista.pedirCantidadDinero();
+					
+					operacionesService.procesarTransferencia(cuentaSeleccionada, numeroCuentaDestino, cantTransferir);
+					
+					vista.mostrarMensaje("Transferencia enviada con éxito.");
+					vista.mostrarMensaje("Nuevo saldo: " + cuentaSeleccionada.getSaldo() + "€");
+					
+				} catch (excepciones.BancaAppException e) {
+					vista.mostrarMensaje("Error: " + e.getMessage());
+				}
+				break;
 			case 4: //Obtener saldo
 				vista.mostrarMensaje("Cuenta: " + cuentaSeleccionada.getNombre());
 				vista.mostrarMensaje("Su saldo es de: " + cuentaSeleccionada.getSaldo() + "€");
 				break;
 			case 5: //Redactar incidencias
-			    String desc = vista.pedirString("Describa su incidencia:");
-			    if (iDao.guardarIncidencia(usuario.getId(), usuario.getNombre(), desc)) {
-			        vista.mostrarMensaje("Incidencia registrada con éxito.");
-			    } else {
-			        vista.mostrarMensaje("Error al registrar incidencia.");
-			    }
-			    break;
+				String desc = vista.pedirString("Describa su incidencia:");
+				// Llamamos al servicio en lugar del iDao
+				if (incidenciasService.registrarNuevaIncidencia(usuario.getId(), usuario.getNombre(), desc)) {
+					vista.mostrarMensaje("Incidencia registrada con éxito.");
+				} else {
+					vista.mostrarMensaje("Error al registrar incidencia.");
+				}
+				break;
 			case 6: // Historial de movimientos
-				List<String> movs = cDao.obtenerHistorialMovimientos(cuentaSeleccionada.getNumCuenta());
-			    vista.mostrarHistorial(movs);
-			    break;
-			    
+				// Llamamos al servicio en lugar del cDao
+				List<String> movs = cuentasService.obtenerHistorial(cuentaSeleccionada.getNumCuenta());
+				vista.mostrarHistorial(movs);
+				break;
+				
 			case 7: //salir
 				vista.mostrarMensaje("Volviendo a selección de cuenta...");
 				break;
@@ -265,24 +296,29 @@ public class Controlador {
 		} while (opcion != 7);
 	}
 
+	/**
+	 * Inicia el flujo que permite crear una nueva cuenta del banco al usuario
+	 * que haya iniciado sesión
+	 */
 	private void procesarAltaNuevaCuenta() {
 		String nombreC = vista.pedirNombreCuenta();
 
-		int numAleatorio = (int) (Math.random() * 9000000L + 1000000L);
+		// La generación del numero de las cuentas la hemos pasado al service
+		int numGenerado = cuentasService.crearNuevaCuenta(usuario.getId(), nombreC);
 
-		if (cDao.crearCuenta(usuario.getId(), nombreC, numAleatorio)) {
-
-			cDao.actualizarSaldo(String.valueOf(numAleatorio), 1000.00);
-
+		if (numGenerado != -1) {
 			vista.mostrarMensaje("¡Cuenta creada con éxito!");
 			vista.mostrarMensaje("Nombre: " + nombreC);
-			vista.mostrarMensaje("Número: " + numAleatorio);
-
+			vista.mostrarMensaje("Número: " + numGenerado);
 		} else {
 			vista.mostrarMensaje("Error al crear la cuenta.");
 		}
 	}
 
+	/**
+	 * Inicia un formulario que el usuario debe de rellenar para poder
+	 * darse de alta en la app
+	 */
 	private void procesarRegistrarNuevoUsuario() {
 		boolean valido = true;
 		usuario = new Usuario(nombreUsuario, contraseniaUsuario, null, null, null, 0, null, 0);
@@ -300,13 +336,16 @@ public class Controlador {
 							usuario.setNombre(nom);
 							usuario.setApellido(ape);
 							usuario.setCorreoElectronico(correo);
-							usuario.setContrasenia(contrasenia);
+							
+							// AQUÍ ESTÁ EL CAMBIO: Hasheamos la contraseña antes de guardarla
+							String contraseniaHasheada = util.GestorPassword.hashear(contrasenia);
+							usuario.setContrasenia(contraseniaHasheada);
 
 							boolean exito = uDao.registrarUsuarioCompleto(usuario);
 							if (exito) {
-								vista.mostrarMensaje("Usuario registrado. ID: " + usuario.getId());
+								vista.mostrarMensaje("Usuario registrado ID: " + usuario.getId());
 							} else {
-								vista.mostrarMensaje("No se pudo completar el registro.");
+								vista.mostrarMensaje("No se ha podido registrar correctamente");
 							}
 							break;
 						} else {
@@ -326,7 +365,7 @@ public class Controlador {
 				if (vista.reintentarCrearCuenta()) {
 					valido = true;
 				} else {
-					vista.mostrarMensaje("Registro cancelado.");
+					vista.mostrarMensaje("Registro cancelado");
 					break;
 				}
 			}

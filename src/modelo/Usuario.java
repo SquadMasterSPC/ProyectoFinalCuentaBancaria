@@ -4,7 +4,8 @@
 package modelo;
 
 /**
- * 
+ * Clase padre para todos los tipos de usuario del banco (Cliente, Empleado o Admin)
+ * Guarda los datos básicos de la persona para poder iniciar sesión y operar
  */
 public class Usuario {
 
@@ -17,6 +18,13 @@ public class Usuario {
 	private String rol;
 	private int id;
 	
+	
+	
+	
+	public Usuario() {
+		super();
+	}
+
 	public Usuario(String numeroDeCuenta, String nombre, String apellido, String correoElectronico,
 			String contrasenia, double saldo, String rol, int id) {
 		super();

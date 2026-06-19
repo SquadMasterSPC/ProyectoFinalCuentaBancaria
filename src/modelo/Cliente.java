@@ -4,7 +4,8 @@
 package modelo;
 
 /**
- * 
+ * Representa a un cliente del banco hereda de Usuario y añade el control del 
+ * saldo total que posee entre todas sus cuentas
  */
 public class Cliente extends Usuario{
 	

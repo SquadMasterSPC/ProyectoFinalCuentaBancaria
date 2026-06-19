@@ -6,7 +6,8 @@ package modelo;
 import java.util.List;
 
 /**
- * 
+ * Clase que agrupa toda la información personal de un cliente 
+ * junto con la lista completa de sus cuentas muy útil para mostrar resúmenes
  */
 public class DatosCliente {
 
