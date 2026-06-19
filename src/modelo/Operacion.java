@@ -6,7 +6,8 @@ package modelo;
 import java.sql.Date;
 
 /**
- * 
+ * Clase padre para los distintos movimientos bancarios
+ * Registra cuánto dinero se ha movido y en qué momento exacto
  */
 public class Operacion {
 

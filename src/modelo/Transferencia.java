@@ -10,10 +10,13 @@ public class Transferencia extends Operacion {
         super(idOperacion, dineroEnMovimiento, fecha);
     }
 
-    /*
-     * Realizamos la transferencia usando como identificadores los numero de cuenta de
-     * la cuenta de origen y la cuenta de destino, despues de haber seleccionado el
-     * destinatario se introducira el importe a transferir
+    /**
+     * Pasa dinero de una cuenta a otra, comprobando que la cuenta de origen tenga fondos suficientes
+     * @param cuentaOrigen La cuenta que manda el dinero
+     * @param cuentaDestino La cuenta que lo recibe
+     * @param cantidad El dinero exacto a transferir
+     * @return true si la transferencia llega a buen puerto
+     * @throws excepciones.modelo.SaldoInsuficienteException Si la cuenta de origen está pelada
      */
     public boolean realizarTransferencia(CuentaBancaria cuentaOrigen, CuentaBancaria cuentaDestino, double cantidad) {
         if (cantidad <= 0) {

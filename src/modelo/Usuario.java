@@ -4,7 +4,8 @@
 package modelo;
 
 /**
- * 
+ * Clase padre para todos los tipos de usuario del banco (Cliente, Empleado o Admin)
+ * Guarda los datos básicos de la persona para poder iniciar sesión y operar
  */
 public class Usuario {
 

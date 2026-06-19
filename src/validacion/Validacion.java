@@ -3,11 +3,10 @@
  */
 package validacion;
 
-import java.util.Iterator;
-import java.util.Scanner;
 
 /**
- * 
+ * Caja de herramientas para comprobar que los datos que mete el usuario por teclado 
+ * tienen sentido y no nos van a romper el programa más adelante
  */
 public class Validacion {
 
@@ -16,6 +15,11 @@ public class Validacion {
 		super();
 	}
 
+	/**
+	 * Revisa que el texto tenga una arroba y termine en un dominio conocido
+	 * @param correoString El correo que ha escrito el usuario
+	 * @return true si tiene buena pinta y pasa el filtro
+	 */
 	public boolean validarCorreos(String correoString) {
 		boolean valido;
 		
@@ -66,10 +70,10 @@ public class Validacion {
 		}
 	}
 	
-	/*
-	 * Validamos que el String introducido no sea solo caracteres en blanco
-	 * permite al usuario dejar caracteres en blanco pero si todo el String
-	 * esta en blanco le devuelve un false
+	/**
+	 * Evita que el usuario nos cuele un texto que sean solo espacios en blanco
+	 * @param credencial La palabra o texto a revisar
+	 * @return true si al menos hay una letra o número útil
 	 */
 	public boolean validarCredencialesString(String credencial) {
 		boolean valido;

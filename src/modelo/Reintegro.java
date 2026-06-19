@@ -10,8 +10,13 @@ public class Reintegro extends Operacion {
         super(idOperacion, dineroEnMovimiento, fecha);
     }
 
-    /*
-     * Retira del saldo de la cuenta la cantidad ingresada
+    /**
+     * Saca dinero de la cuenta, comprobando antes que no te quedes en números rojos
+     * @param cuenta La cuenta de donde sacamos el dinero
+     * @param cantidad Lo que queremos sacar
+     * @param saldoDisponible El saldo que tiene la cuenta en este momento
+     * @return true si se ha podido retirar el dinero con éxito
+     * @throws excepciones.modelo.SaldoInsuficienteException Si intentas sacar más dinero del que tienes
      */
     public boolean retirar(CuentaBancaria cuenta, double cantidad, double saldoDisponible) {
 

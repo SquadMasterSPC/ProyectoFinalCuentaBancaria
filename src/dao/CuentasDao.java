@@ -1,6 +1,5 @@
 package dao;
 
-import java.security.interfaces.RSAKey;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +9,11 @@ import modelo.DatosCliente;
 import excepciones.persistencia.PersistenciaException;
 import excepciones.seguridad.CuentaNoEncontradaException;
 
+
+/**
+ * Clase que se encarga de gestionar la persistencia de los datos
+ * de las cuentas y sus movimientos
+ */
 public class CuentasDao {
 
 	private CuentaBancaria cuenta;
@@ -23,6 +27,11 @@ public class CuentasDao {
 
 	}
 
+	/**
+	 * Recupera todas las cuentas bancarias asociadas a un cliente específico
+	 * @param idUsuario El identificador único del usuario propietario de las cuentas
+	 * @return Una lista de objetos CuentaBancaria devolverá una lista vacía si no tiene cuentas
+	 */
 	public List<CuentaBancaria> obtenerCuentasPorUsuario(int idUsuario) {
 		List<CuentaBancaria> lista = new ArrayList<>();
 		Connection con = null;
@@ -46,9 +55,12 @@ public class CuentasDao {
 		return lista;
 	}
 
-	/*
-	 * Actualizamos el valor del saldo de la cuenta seleccionada según
-	 * la operación elegida
+	/**
+	 * Modifica el saldo actual de una cuenta en la base de datos
+	 * @param numCuenta El identificador de la cuenta a actualizar
+	 * @param cantidad El importe a sumar (puede ser negativo para restarlo en reintegros o transferencias)
+	 * @return true si el saldo se actualizó correctamente
+	 * @throws excepciones.seguridad.CuentaNoEncontradaException si la cuenta no existe en el sistema
 	 */
 	public boolean actualizarSaldo(String numCuenta, double cantidad) {
 		Connection con = null;
@@ -70,9 +82,12 @@ public class CuentasDao {
 		}
 	}
 
-	/*
-	 * Creamos una cuenta que le pertenecera a un usuario y se le asignara
-	 * un nombre y un numero de cuenta
+	/**
+	 * Inicia la creación de una cuenta bancaria en el sistema asociada a un cliente
+	 * @param idUsuario El identificador del cliente que será el titular
+	 * @param nombre El alias o nombre descriptivo de la cuenta
+	 * @param numAleatorio El número de cuenta bancaria generado para este registro
+	 * @return true si la inserción en la base de datos fue exitosa
 	 */
 	public boolean crearCuenta(int idUsuario, String nombre, long numAleatorio) {
 		Connection con = null;
@@ -91,9 +106,11 @@ public class CuentasDao {
 		}
 	}
 
-	/*
-	 * Obtenemos una cuenta bancaria de la base de datos utilizando
-	 * su número de cuenta
+	/**
+	 * Busca y devuelve los datos exactos de una cuenta bancaria a partir de su número identificador
+	 * @param numCuenta El número único de la cuenta
+	 * @return Un objeto CuentaBancaria con los datos extraídos de la base de datos
+	 * @throws excepciones.seguridad.CuentaNoEncontradaException Si no existe ninguna cuenta con ese número
 	 */
 	public CuentaBancaria obtenerCuentaPorNumero(int numCuenta) {
 		Connection con = null;
@@ -122,9 +139,10 @@ public class CuentasDao {
 		}
 	}
 
-	/*
-	 * Obtenemos todos los movimientos relacionados con la cuenta del cliente
-	 * seleccionada
+	/**
+	 * Extrae el registro cronológico de todas las operaciones realizadas en una cuenta específica
+	 * @param numCuenta El número de la cuenta a consultar
+	 * @return Una lista de cadenas de texto preformateadas con la fecha, tipo y cantidad de cada movimiento
 	 */
 	public List<String> obtenerHistorialMovimientos(String numCuenta) {
 		List<String> historial = new ArrayList<>();
@@ -148,8 +166,12 @@ public class CuentasDao {
 		return historial;
 	}
 
-	/*
-	 * Permitimos que los empleados puedan sacar todos los datos del cliente
+	/**
+	 * Recopila toda la información de un cliente (datos personales y cuentas asociadas)
+	 * cruzando las tablas de usuarios y cuentas bancarias. Ideal para la vista de empleados
+	 * @param nombreBusqueda el nombre de usuario del cliente a consultar
+	 * @return Un objeto DatosCliente empaquetando toda su información
+	 * @throws excepciones.seguridad.CuentaNoEncontradaException Si el usuario no existe
 	 */
 	public DatosCliente mostrarDatosCompletosCliente(String nombreBusqueda) {
 		Connection con = null;
@@ -189,9 +211,12 @@ public class CuentasDao {
 		}
 	}
 
-	/*
-	 * Registramos en el historial de movimientos el movimiento realizado por
-	 * cualquier cuenta
+	/**
+	 * Guarda un nuevo apunte en el historial de movimientos de la cuenta
+	 * @param numCuenta El número de la cuenta afectada
+	 * @param tipo La descripción de la operación
+	 * @param cantidad El valor monetario operado
+	 * @return true si el registro se completó correctamente
 	 */
 	public boolean registrarMovimiento(String numCuenta, String tipo, double cantidad) {
 		Connection con = null;

@@ -4,7 +4,8 @@
 package modelo;
 
 /**
- * 
+ * Representa a un trabajador del banco con permisos especiales para revisar 
+ * los historiales de los clientes y atender sus incidencias
  */
 public class Empleado extends Usuario{
 

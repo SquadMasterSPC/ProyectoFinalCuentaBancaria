@@ -5,12 +5,16 @@ import excepciones.vista.DatoInvalidoException;
 
 public class Ingreso extends Operacion{
 
+	
 	public Ingreso(String idOperacion, double dineroEnMovimiento, Date fecha) {
 		super(idOperacion, dineroEnMovimiento, fecha);
 	}
 	
-	/*
-	 * Ingresa en la cuenta la cantidad ingresada
+	/**
+	 * Suma el dinero indicado al saldo de la cuenta
+	 * @param cuenta La cuenta donde se va a meter el dinero
+	 * @param cantidad El dinero a sumar
+	 * @return true si el ingreso se realiza sin problemas
 	 */
 	public boolean ingresar(CuentaBancaria cuenta, double cantidad) {
 		if(cantidad <= 0) {

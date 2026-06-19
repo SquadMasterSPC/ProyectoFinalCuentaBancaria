@@ -8,13 +8,21 @@ import excepciones.seguridad.CredencialesInvalidasException;
 
 public class UsuariosDao {
 
+	/**
+	 * Encargada de las operaciones a nivel de base de datos de los perfiles de usuario
+	 * Proporciona métodos para la búsqueda, validación y registro de usuarios en el sistema
+	 */
 	public UsuariosDao() {
 		super();
 	}
-
-
-
-
+	
+	/**
+	 * Localiza un usuario en la base de datos basándose únicamente en su nombre de usuario
+	 * Es fundamental para el proceso de autenticación con contraseñas encriptadas
+	 * @param username El nombre del usuario introducido en el login
+	 * @return Un objeto Usuario con todos sus datos cargados
+	 * @throws excepciones.seguridad.CredencialesInvalidasException Si el usuario no existe en la base de datos
+	 */
 	public Usuario buscarPorUsername(String username) {
 	    Connection con = null;
 	    PreparedStatement ps = null;
@@ -94,10 +102,14 @@ public class UsuariosDao {
 	    return null;
 	}
 
-/*
- * Creamos un nuevo usuario pidiendo nombre, apellido, correo y contraseña
- * aparte se le asignara un rol segun si es cliente, empleado o admin 
- */
+	/**
+	 * Inserta un nuevo usuario en la base de datos 
+	 * Tras la inserción recupera el ID autogenerado para construir y asignarle su identificador 
+	 * de cuenta documental 
+	 * @param user El objeto Usuario con los datos extraídos del formulario de registro
+	 * @return true si el alta y la actualización de su número de cuenta fueron exitosas
+	 * @throws excepciones.persistencia.PersistenciaException Si ocurre un fallo en la transacción SQL
+	 */
     public boolean registrarUsuarioCompleto(Usuario user) {
         Connection con = null;
         PreparedStatement ps = null;
@@ -133,8 +145,7 @@ public class UsuariosDao {
             }
             return true;
         } catch (SQLException e) {
-            System.out.println("Error en registro: " + e.getMessage());
-            return false;
+            throw new PersistenciaException("Error en registro: " + e.getMessage(), e);
         } finally {
             ConexionDB.cerrar(con);
         }
