@@ -236,4 +236,29 @@ public class CuentasDao {
 			ConexionDB.cerrar(con);
 		}
 	}
+	
+	//ActualizarSaldo atomizado
+	public boolean actualizarSaldo(Connection con, String numCuenta, double cantidad) throws SQLException {
+		String sql = "UPDATE CuentaBancaria SET saldo = saldo + ? WHERE numeroCuenta = ?";
+		try (PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setDouble(1, cantidad);
+			ps.setLong(2, Long.parseLong(numCuenta));
+			
+			if (ps.executeUpdate() == 0) {
+				throw new excepciones.seguridad.CuentaNoEncontradaException("No se pudo actualizar el saldo: la cuenta no existe.");
+			}
+			return true;
+		}
+	}
+
+	public boolean registrarMovimiento(Connection con, String numCuenta, String tipo, double cantidad) throws SQLException {
+		String sql = "INSERT INTO movimientos (numeroCuenta, tipo, cantidad, fecha) VALUES (?, ?, ?, NOW())";
+		try (PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setLong(1, Long.parseLong(numCuenta));
+			ps.setString(2, tipo);
+			ps.setDouble(3, cantidad);
+
+			return ps.executeUpdate() > 0;
+		}
+	}
 }

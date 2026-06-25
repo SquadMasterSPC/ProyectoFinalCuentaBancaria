@@ -321,7 +321,7 @@ public class Controlador {
 	 */
 	private void procesarRegistrarNuevoUsuario() {
 		boolean valido = true;
-		usuario = new Usuario(nombreUsuario, contraseniaUsuario, null, null, null, 0, null, 0);
+		usuario = new Usuario(); //Antes esto estaba totalmente parametrizado ahora viene sin nada
 
 		while (valido) {
 			vista.mostrarMensaje("\n--- FORMULARIO DE REGISTRO ---");
