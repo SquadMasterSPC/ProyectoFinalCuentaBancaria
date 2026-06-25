@@ -66,6 +66,7 @@ public class UsuariosDao {
         }
     }
 	
+	//Codigo muerto, eliminar cuando sea posible
 	public Usuario validarUsuario(String usuario, String contrasenia) {
 	    Connection con = null;
 	    PreparedStatement ps = null;
